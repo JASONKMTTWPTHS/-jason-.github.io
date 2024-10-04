@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>單字測驗app</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <h1 class="bg-primary text-center">單字測驗app</h1>
+
+    <!-- 用戶輸入部分 -->
+    <div id="start-section">
+        <form id="startForm">
+            <textarea class="form-control" id="wordList" placeholder="請輸入單字（格式：單字/定義，每行一個）" rows="5" required></textarea>
+            <input type="number" class="form-control" id="totalQuestions" placeholder="請輸入題數" required min="1">
+            <button class="btn btn-default btn-lg" type="submit">開始測驗</button>
+        </form>
+    </div>
+
+    <!-- 問題部分 -->
+    <div id="quiz-section" style="display:none;">
+        <h4 id="questionAndChoices"></h4>
+        <form id="quizForm">
+            <input type="text" class="form-control" id="answer" placeholder="輸入答案（1-4）或輸入5退出" required>
+            <button class="btn btn-default btn-lg" type="submit">提交答案</button>
+        </form>
+        <h4 class="bg-primary" id="result"></h4>
+    </div>
+
+    <!-- 結束頁面 -->
+    <div id="end-section" style="display:none;">
+        <h1>遊戲結束</h1>
+        <p id="final-score"></p>
+        <button class="btn btn-primary" onclick="restart()">返回首頁，重新開始</button>
+    </div>
+</div>
+
+<script>
+    let questionNo = 1;
+    let score = 0;
+    let totalQuestions;
+    let words = {};
+    let wordList = [];
+    let correctAnswer;
+
+    // 啟動測驗
+    document.getElementById("startForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        totalQuestions = document.getElementById("totalQuestions").value;
+        const input = document.getElementById("wordList").value.trim();
+
+        if (input) {
+            // 將用戶輸入的單字格式化
+            const rows = input.split('\n');
+            rows.forEach(row => {
+                const [word, definition] = row.split('/');
+                if (word && definition) {
+                    words[word.trim()] = definition.trim();  // 儲存單字和定義
+                }
+            });
+
+            wordList = Object.keys(words);
+
+            if (wordList.length === 0) {
+                alert("請至少輸入一個有效的單字！");
+                return;
+            }
+
+            document.getElementById("start-section").style.display = "none";
+            document.getElementById("quiz-section").style.display = "block";
+            generateQA();
+        } else {
+            alert("請輸入單字資料！");
+        }
+    });
+
+    // 隨機生成問題和選項
+    function generateQA() {
+        let wordIndex = Math.floor(Math.random() * wordList.length);
+        let quizWord = wordList[wordIndex];
+        correctAnswer = words[quizWord];
+        
+        let choices = [correctAnswer];  // 將正確答案作為一個選項
+        let usedChoices = new Set(choices); // 用來追蹤已使用的選項
+
+        while (choices.length < 4) {
+            let randomWord = Object.values(words)[Math.floor(Math.random() * wordList.length)];
+            if (!usedChoices.has(randomWord)) {
+                choices.push(randomWord);  // 確保選項不重複
+                usedChoices.add(randomWord); // 添加到已使用集合
+            }
+        }
+        choices.sort(() => Math.random() - 0.5);  // 隨機排列選項
+
+        // 顯示問題和選項
+        document.getElementById("questionAndChoices").innerHTML = `問題 ${questionNo}: 單字 "${quizWord}" 的意思是什麼？<br>
+            1. ${choices[0]}<br> 2. ${choices[1]}<br> 3. ${choices[2]}<br> 4. ${choices[3]}`;
+        document.getElementById("answer").value = '';  // 自動清除輸入框
+    }
+
+    // 提交答案
+    document.getElementById("quizForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        let answer = document.getElementById("answer").value.trim();
+
+        // 判斷用戶是否選擇退出
+        if (answer === "5") {
+            endQuiz("您已選擇退出測驗。");
+            return;
+        }
+
+        // 判斷答案
+        const selectedIndex = parseInt(answer) - 1; // 將輸入的選項轉為索引（0-3）
+        if (selectedIndex >= 0 && selectedIndex < 4) {
+            const selectedAnswer = document.getElementById("questionAndChoices").innerText
+                .split('\n')[selectedIndex + 1].split('. ')[1]; // 獲取選擇的答案
+            if (correctAnswer === selectedAnswer) {
+                document.getElementById("result").innerText = "正確!";
+                score++;
+            } else {
+                document.getElementById("result").innerText = `錯誤! 正確答案是: ${correctAnswer}`;
+            }
+        } else {
+            document.getElementById("result").innerText = "請輸入有效的選項（1-4）!";
+        }
+
+        questionNo++;
+        if (questionNo > totalQuestions) {
+            endQuiz();
+        } else {
+            generateQA();
+        }
+    });
+
+    // 結束測驗
+    function endQuiz(message) {
+        document.getElementById("quiz-section").style.display = "none";
+        document.getElementById("end-section").style.display = "block";
+        if (message) {
+            document.getElementById("final-score").innerText = message;
+        } else {
+            document.getElementById("final-score").innerText = `您的得分: ${score} / ${totalQuestions}`;
+        }
+    }
+
+    // 重新開始測驗
+    function restart() {
+        questionNo = 1;
+        score = 0;
+        document.getElementById("end-section").style.display = "none";
+        document.getElementById("start-section").style.display = "block";
+        document.getElementById("result").innerText = '';
+        document.getElementById("answer").value = '';
+        document.getElementById("wordList").value = ''; // 清空輸入框
+    }
+
+</script>
+</body>
+</html>
